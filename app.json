@@ -1,0 +1,61 @@
+{
+  "name": "ginospizza",
+  "description": "Gino's Pizza - AI voice-driven pizza ordering agent with visual pizza builder",
+  "keywords": ["signalwire", "ai", "agent", "webrtc", "python", "pizza", "voice"],
+  "env": {
+    "SIGNALWIRE_SPACE_NAME": {
+      "description": "SignalWire space name (e.g., 'myspace' or 'myspace.signalwire.com')",
+      "required": true
+    },
+    "SIGNALWIRE_PROJECT_ID": {
+      "description": "SignalWire project ID",
+      "required": true
+    },
+    "SIGNALWIRE_TOKEN": {
+      "description": "SignalWire API token",
+      "required": true
+    },
+    "SWML_PROXY_URL_BASE": {
+      "description": "Public URL base for SWML callbacks (e.g., 'https://example.example.com')",
+      "required": true
+    },
+    "SWML_BASIC_AUTH_USER": {
+      "description": "Basic auth username for SWML endpoints",
+      "required": false
+    },
+    "SWML_BASIC_AUTH_PASSWORD": {
+      "description": "Basic auth password for SWML endpoints",
+      "required": false
+    },
+    "AGENT_NAME": {
+      "description": "Name for the SWML handler resource",
+      "value": "ginospizza"
+    },
+    "PORT": {
+      "description": "Server port",
+      "value": "5000"
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "healthchecks": {
+    "web": [
+      {
+        "type": "startup",
+        "name": "port listening",
+        "listening": true,
+        "attempts": 10,
+        "wait": 5,
+        "timeout": 60
+      }
+    ]
+  }
+}

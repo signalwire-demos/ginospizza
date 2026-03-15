@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.env~
+.DS_Store
+calls/
+.claude/
+ginos_pizza_assets_pack_v2/
+ginos.json

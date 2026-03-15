@@ -1,0 +1,643 @@
+/* Gino's Pizza - Italian Pizzeria Theme */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a1a;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    color: #333;
+}
+
+/* ── Header ──────────────────────────────────────────────────────── */
+
+.header {
+    background: linear-gradient(135deg, #8B0000 0%, #C41E3A 50%, #8B0000 100%);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    border-bottom: 4px solid #FFD700;
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-brand img {
+    height: 70px;
+    width: auto;
+    border-radius: 8px;
+}
+
+.header-brand h1 {
+    color: #FFD700;
+    font-size: 1.8rem;
+    font-weight: 800;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    font-style: italic;
+}
+
+.header-brand .tagline {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.header-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+
+button {
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-primary {
+    background: #2E7D32;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #388E3C;
+}
+
+.btn-danger {
+    background: #C41E3A;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #D32F2F;
+}
+
+.btn-mute {
+    background: #555;
+    color: white;
+}
+
+.btn-mute:hover {
+    background: #666;
+}
+
+/* ── Main Layout ─────────────────────────────────────────────────── */
+
+.main-container {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.left-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.right-panel {
+    width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex-shrink: 0;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────── */
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #8B0000;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #FFD700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ── Pizza Canvas ────────────────────────────────────────────────── */
+
+.pizza-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pizza-tabs {
+    display: flex;
+    gap: 4px;
+}
+
+.pizza-tab {
+    padding: 6px 16px;
+    border-radius: 8px 8px 0 0;
+    background: #555;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.pizza-tab.active {
+    background: #8B0000;
+    color: #FFD700;
+}
+
+.pizza-tab:hover:not(.active) {
+    background: #777;
+}
+
+.pizza-canvas-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.pizza-canvas-wrapper::before {
+    content: '';
+    display: block;
+    padding-top: 100%; /* 1:1 aspect ratio */
+}
+
+.pizza-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle, #F5E6D3 0%, #E8D5B7 60%, #D4C5A0 100%);
+    overflow: hidden;
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.4),
+        inset 0 0 30px rgba(0, 0, 0, 0.05);
+    border: 3px solid #C8B894;
+}
+
+.pizza-canvas .pizza-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+}
+
+.pizza-canvas.pizza-locked {
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.4),
+        0 0 0 3px #2E7D32,
+        inset 0 0 30px rgba(0, 0, 0, 0.05);
+}
+
+.pizza-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #999;
+    z-index: 1;
+}
+
+.pizza-placeholder img {
+    width: 800px;
+    max-width: 80%;
+    opacity: 0.7;
+    margin-bottom: 20px;
+}
+
+.pizza-placeholder p {
+    font-size: 1.2rem;
+    font-style: italic;
+}
+
+/* ── Status Bar ──────────────────────────────────────────────────── */
+
+#status {
+    padding: 12px 16px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.status-greeting {
+    background: #E8F5E9;
+    color: #2E7D32;
+}
+
+.status-building {
+    background: #FFF3E0;
+    color: #E65100;
+}
+
+.status-confirming {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+.status-payment {
+    background: #FFD700;
+    color: #333;
+}
+
+.status-complete {
+    background: #2E7D32;
+    color: white;
+}
+
+/* ── Order Summary ───────────────────────────────────────────────── */
+
+.order-section {
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.order-pizza {
+    margin-bottom: 12px;
+    padding: 10px;
+    background: #FFF8F0;
+    border-radius: 8px;
+    border-left: 3px solid #C41E3A;
+}
+
+.order-pizza-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    color: #8B0000;
+    margin-bottom: 4px;
+}
+
+.order-pizza-detail {
+    font-size: 0.85rem;
+    color: #666;
+    padding-left: 8px;
+}
+
+.order-extras {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+}
+
+.order-extras-title {
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+.order-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.order-totals {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 2px solid #FFD700;
+}
+
+.total-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 0.95rem;
+}
+
+.total-line.final {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #8B0000;
+    background: #FFD700;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-top: 8px;
+}
+
+/* ── Order Number ────────────────────────────────────────────────── */
+
+.order-number-display {
+    background: linear-gradient(135deg, #FFD700, #FFC107);
+    color: #333;
+    padding: 16px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 800;
+    animation: pulse 2s infinite;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+}
+
+/* ── Menu Display ────────────────────────────────────────────────── */
+
+.menu-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.menu-tab {
+    padding: 5px 12px;
+    border-radius: 6px;
+    background: #f0f0f0;
+    color: #555;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.menu-tab.active {
+    background: #8B0000;
+    color: white;
+}
+
+.menu-tab:hover:not(.active) {
+    background: #ddd;
+}
+
+.menu-content {
+    display: none;
+}
+
+.menu-content.active {
+    display: block;
+}
+
+.menu-grid {
+    display: grid;
+    gap: 4px;
+}
+
+.menu-grid-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: #FFF8F0;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    border: 1px solid #f0e8d8;
+    transition: all 0.2s;
+}
+
+.menu-grid-item:hover {
+    background: #FFF0E0;
+    border-color: #C41E3A;
+}
+
+.menu-item-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.menu-item-price {
+    color: #2E7D32;
+    font-weight: 700;
+    white-space: nowrap;
+    margin-left: 8px;
+}
+
+.menu-item-note {
+    color: #999;
+    font-size: 0.75rem;
+    font-style: italic;
+}
+
+.menu-specialty-item {
+    align-items: flex-start;
+}
+
+.menu-specialty-item .menu-item-note {
+    margin-top: 2px;
+}
+
+/* ── Toast/Result Message ────────────────────────────────────────── */
+
+#result-message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #2E7D32;
+    color: white;
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 1000;
+}
+
+#result-message.show {
+    opacity: 1;
+}
+
+/* ── Event Log ───────────────────────────────────────────────────── */
+
+#event-log {
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+    background: #f9f9f9;
+    border-radius: 6px;
+    padding: 8px;
+}
+
+.event-entry {
+    padding: 4px 8px;
+    margin-bottom: 3px;
+    border-left: 3px solid #ddd;
+    font-family: monospace;
+    font-size: 0.75rem;
+}
+
+.event-entry.user-event {
+    border-color: #C41E3A;
+    background: #FFF8F0;
+}
+
+/* ── Progress Steps ──────────────────────────────────────────────── */
+
+.progress-steps {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 0;
+}
+
+.progress-steps span {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #e0e0e0;
+    color: #999;
+    transition: all 0.3s;
+}
+
+.progress-steps span.active {
+    background: #C41E3A;
+    color: white;
+}
+
+.progress-steps span.done {
+    background: #2E7D32;
+    color: white;
+}
+
+/* ── Build Price ─────────────────────────────────────────────────── */
+
+.build-price {
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2E7D32;
+    padding: 8px 0;
+}
+
+/* ── Voice Indicator ─────────────────────────────────────────────── */
+
+.voice-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    color: #2E7D32;
+    font-weight: 600;
+}
+
+.voice-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2E7D32;
+    animation: voice-pulse 1.5s infinite;
+}
+
+@keyframes voice-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+    .main-container {
+        flex-direction: column;
+    }
+
+    .right-panel {
+        width: 100%;
+    }
+
+    .pizza-canvas-wrapper {
+        max-width: 350px;
+    }
+
+    .header-brand h1 {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .header {
+        padding: 8px 12px;
+    }
+
+    .header-brand h1 {
+        font-size: 1.1rem;
+    }
+
+    .header-brand .tagline {
+        display: none;
+    }
+
+    .header-brand img {
+        height: 36px;
+    }
+
+    .main-container {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .pizza-canvas-wrapper {
+        max-width: 280px;
+    }
+}

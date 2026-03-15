@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gino's Pizza - Build Your Perfect Pizza</title>
+    <meta property="og:title" content="Gino's Pizza - AI Pizza Ordering">
+    <meta property="og:description" content="Build your perfect pizza by voice with Gino, our AI pizza chef!">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="/logo.png">
+    <link rel="icon" type="image/png" href="/logo.png">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-brand">
+            <img src="/logo.png" alt="Gino's Pizza">
+            <div>
+                <h1>GINO'S PIZZA</h1>
+                <div class="tagline">Build Your Perfect Pizza by Voice</div>
+            </div>
+        </div>
+        <div class="header-controls">
+            <button id="connectBtn" class="btn-primary">Start Ordering</button>
+            <button id="hangupBtn" class="btn-danger" style="display:none;">End Call</button>
+            <button id="muteBtn" class="btn-mute" style="display:none;">Mute</button>
+        </div>
+    </div>
+
+    <!-- Voice Indicator -->
+    <div class="voice-indicator" id="voice-indicator" style="display:none;">
+        <div class="voice-dot"></div>
+        <span>Listening...</span>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <!-- Left Panel: Pizza Canvas + Menu -->
+        <div class="left-panel">
+            <!-- Status -->
+            <div id="status" class="status-greeting">Welcome to Gino's Pizza!</div>
+
+            <!-- Progress Steps -->
+            <div class="progress-steps" id="progress-steps" style="display:none;">
+                <span data-step="size">Size</span>
+                <span data-step="crust">Crust</span>
+                <span data-step="sauce">Sauce</span>
+                <span data-step="cheese">Cheese</span>
+                <span data-step="toppings">Toppings</span>
+                <span data-step="finishes">Finishes</span>
+            </div>
+
+            <!-- Pizza Builder -->
+            <div class="card pizza-section">
+                <div class="card-title">Pizza Builder</div>
+                <div class="pizza-tabs" id="pizza-tabs">
+                    <!-- Tabs added dynamically -->
+                </div>
+                <div class="pizza-canvas-wrapper" id="pizza-canvas-wrapper">
+                    <div class="pizza-placeholder" id="pizza-placeholder">
+                        <img src="/logo.png" alt="Gino's Pizza">
+                        <p>Start ordering to build your pizza!</p>
+                    </div>
+                </div>
+                <div class="build-price" id="build-price" style="display:none;">
+                    Building: <span id="build-price-value">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Menu -->
+            <div class="card" id="menu-card">
+                <div class="card-title">Menu</div>
+                <div class="menu-tabs" id="menu-tabs"></div>
+                <div id="menu-content"></div>
+            </div>
+
+            <!-- Event Log (hidden by default) -->
+            <div class="card" id="event-log-container" style="display:none;">
+                <div class="card-title">Event Log</div>
+                <div id="event-log">
+                    <div id="event-entries"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Order Summary -->
+        <div class="right-panel">
+            <!-- Order Display -->
+            <div class="card">
+                <div class="card-title">Order Summary</div>
+                <div class="order-section" id="order-section">
+                    <div id="order-items" style="text-align:center; color:#999; padding:30px;">
+                        Your order will appear here
+                    </div>
+                </div>
+                <div class="order-totals" id="order-totals" style="display:none;">
+                    <div class="total-line">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">$0.00</span>
+                    </div>
+                    <div class="total-line">
+                        <span>Tax:</span>
+                        <span id="tax">$0.00</span>
+                    </div>
+                    <div class="total-line final">
+                        <span>Total:</span>
+                        <span id="total">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Number (hidden) -->
+            <div class="order-number-display" id="order-number" style="display:none;">
+                Order #<span id="order-number-value">000</span>
+            </div>
+
+            <!-- Options -->
+            <div class="card">
+                <div style="display:flex; gap:16px; font-size:0.85rem;">
+                    <label><input type="checkbox" id="showLog"> Show event log</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast overlay -->
+    <div id="result-message"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.signalwire.com/@signalwire/client"></script>
+    <script src="/pizza-renderer.js"></script>
+    <script src="/app.js"></script>
+</body>
+</html>
