@@ -4,7 +4,7 @@
   <img src="web/logo.png" alt="Gino's Pizza" width="300">
 </p>
 
-AI-powered pizza ordering agent built with the [SignalWire Agent SDK](https://github.com/signalwire/signalwire-agents). Customers order by voice while watching their pizza being assembled on-screen in real-time using layered transparent PNG assets.
+AI-powered pizza ordering agent built with the [SignalWire Python SDK](https://github.com/signalwire/signalwire-python). Customers order by voice while watching their pizza being assembled on-screen in real-time using layered transparent PNG assets.
 
 ## Features
 
