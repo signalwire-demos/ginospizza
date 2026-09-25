@@ -2,9 +2,15 @@
 // Frontend is display-only: ALL pricing comes from backend events.
 
 let client = null;
-let roomSession = null;
+let call = null;
 let isMuted = false;
 let pendingTimeouts = [];
+// v4: track RxJS subscriptions + teardown/media state
+let subscriptions = [];
+let teardownDone = false;
+let remoteAudioEl = null;
+let lastRemoteSig = '';
+let currentLocalStream = null;
 
 // Pizza renderers - one per pizza
 const renderers = new Map(); // pizza_index -> PizzaRenderer
@@ -684,108 +690,179 @@ function displayMenu(menu) {
 
 // ── WebRTC Connection ───────────────────────────────────────────────────────
 
+// ── v4 helpers ────────────────────────────────────────────────────────────
+
+function track(sub) {
+    if (sub) subscriptions.push(sub);
+    return sub;
+}
+
+function streamSignature(stream) {
+    return stream.getTracks().map(t => t.kind + ':' + t.id).sort().join(',');
+}
+
+// Hardened token fetch: tolerate the FastAPI tuple-return array shape.
+async function fetchGuestToken() {
+    const resp = await fetch('/get_token');
+    let data = await resp.json();
+    if (Array.isArray(data)) data = data[0] || {};
+    if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
+    if (!data.token || !data.address) throw new Error('Token response missing token/address');
+    return data;
+}
+
+// Gate the dial on the client connecting (replays synchronously; never errors
+// on bad creds -> needs a timeout).
+function waitForConnected(swClient, timeoutMs) {
+    return new Promise((resolve, reject) => {
+        let settled = false;
+        let sub = null;
+        const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            if (sub) { try { sub.unsubscribe(); } catch (e) {} }
+            reject(new Error('Timed out waiting for SignalWire connection'));
+        }, timeoutMs);
+        sub = swClient.isConnected$.subscribe(connected => {
+            if (connected && !settled) {
+                settled = true;
+                clearTimeout(timer);
+                setTimeout(() => { if (sub) { try { sub.unsubscribe(); } catch (e) {} } }, 0);
+                resolve();
+            }
+        });
+    });
+}
+
+// Audio-only call: attach the remote stream to a hidden <audio> so Gino is
+// audible (no rootElement/auto-play in v4). Re-attach on track-set change.
+function attachRemoteStream(stream) {
+    if (!stream) return;
+    if (!remoteAudioEl) {
+        remoteAudioEl = document.createElement('audio');
+        remoteAudioEl.autoplay = true;
+        remoteAudioEl.setAttribute('playsinline', '');
+        remoteAudioEl.style.display = 'none';
+        document.body.appendChild(remoteAudioEl);
+    }
+    const sig = streamSignature(stream);
+    if (sig !== lastRemoteSig) {
+        lastRemoteSig = sig;
+        remoteAudioEl.srcObject = stream;
+        remoteAudioEl.play().catch(e => console.log('Remote audio play blocked:', e.message));
+    }
+}
+
 async function connect() {
     try {
         connectBtn.disabled = true;
         connectBtn.textContent = 'Connecting...';
         updateStatus('greeting', 'Getting token...');
 
-        const tokenResp = await fetch('/get_token');
-        const tokenData = await tokenResp.json();
-        if (tokenData.error) throw new Error(tokenData.error);
+        // Reset per-connection state
+        teardownDone = false;
+        subscriptions = [];
+        remoteAudioEl = null;
+        lastRemoteSig = '';
+        currentLocalStream = null;
 
+        const tokenData = await fetchGuestToken();
         const currentToken = tokenData.token;
         const currentDestination = tokenData.address;
 
         console.log('Token received, destination:', currentDestination);
         updateStatus('greeting', 'Connecting to Gino...');
 
-        if (window.SignalWire && typeof window.SignalWire.SignalWire === 'function') {
-            client = await window.SignalWire.SignalWire({
-                token: currentToken,
-                logLevel: 'debug',
-            });
-        } else {
-            throw new Error('SignalWire SDK not loaded');
+        const SW = window.SignalWire;
+        if (!SW || typeof SW.SignalWire !== 'function') {
+            throw new Error('SignalWire v4 SDK not loaded');
         }
 
-        // Client-level user events
-        client.on('user_event', (params) => {
-            console.log('CLIENT user_event:', params);
-            handleUserEvent(params);
-        });
+        // v4: constructor auto-connects; guest SAT via StaticCredentialProvider
+        client = new SW.SignalWire(new SW.StaticCredentialProvider({ token: currentToken }));
 
-        // Dial audio-only
-        roomSession = await client.dial({
-            to: currentDestination,
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: false,
-                autoGainControl: false,
-            },
+        track(client.errors$.subscribe(e => console.error('SDK error:', e && e.code, e && e.message)));
+        track(client.warnings$.subscribe(w => console.warn('SDK warning:', w && w.code, w && w.message)));
+
+        await waitForConnected(client, 15000);
+
+        // Dial audio-only (no avatar video; the pizza is rendered client-side)
+        call = await client.dial(currentDestination, {
+            audio: true,
             video: false,
+            receiveAudio: true,
+            receiveVideo: false,
             userVariables: {
                 userName: "Gino's Pizza Customer",
-                interface: 'web-ui',
-                timestamp: new Date().toISOString(),
+                interface: 'web-ui-v4',
             },
         });
 
-        // Room session events
-        roomSession.on('call.joined', () => {
-            connectBtn.style.display = 'none';
-            hangupBtn.style.display = 'inline-block';
-            muteBtn.style.display = 'inline-block';
-            document.getElementById('voice-indicator').style.display = 'flex';
-            updateStatus('greeting', 'Connected! Ready to take your order.');
-            logEvent('Connected to Gino');
-        });
+        // Remote audio
+        track(call.remoteStream$.subscribe(stream => attachRemoteStream(stream)));
+        // Cache local stream for the mute fallback
+        track(call.localStream$.subscribe(stream => { currentLocalStream = stream || null; }));
 
-        let disconnectTriggered = false;
-        const handleDisconnect = (eventName) => {
-            if (disconnectTriggered) return;
-            disconnectTriggered = true;
-            console.log(`Disconnect: ${eventName}`);
-            setTimeout(() => {
-                disconnect();
-                disconnectTriggered = false;
-            }, 100);
-        };
-
-        roomSession.on('call.state', (params) => {
-            const s = params?.payload?.call_state || params?.call_state || params?.state;
-            if (s === 'ending' || s === 'ended' || s === 'hangup') handleDisconnect('call.state');
-        });
-        roomSession.on('destroy', () => handleDisconnect('destroy'));
-        roomSession.on('disconnected', () => handleDisconnect('disconnected'));
-        roomSession.on('room.left', () => handleDisconnect('room.left'));
-        roomSession.on('call.ended', () => handleDisconnect('call.ended'));
-
-        roomSession.on('user_event', (params) => {
-            console.log('ROOM user_event:', params);
+        // Single user_event subscription (handleUserEvent unwraps .event)
+        track(call.subscribe('user_event').subscribe(evt => {
+            const params = (evt && evt.params) ? evt.params : evt;
             handleUserEvent(params);
-        });
+        }));
 
-        await roomSession.start();
-        console.log('Call started');
+        // Lifecycle
+        track(call.status$.subscribe({
+            next: (status) => {
+                console.log('call.status:', status);
+                if (status === 'connected') {
+                    onConnected();
+                } else if (status === 'disconnected' || status === 'failed' || status === 'destroyed') {
+                    disconnect();
+                }
+            },
+            complete: () => disconnect(),
+        }));
+
+        console.log('Dial initiated');
     } catch (error) {
         console.error('Connection error:', error);
         updateStatus('greeting', 'Connection failed. Try again.');
         connectBtn.disabled = false;
         connectBtn.textContent = 'Start Ordering';
+        disconnect();
     }
 }
 
+function onConnected() {
+    connectBtn.style.display = 'none';
+    hangupBtn.style.display = 'inline-block';
+    muteBtn.style.display = 'inline-block';
+    document.getElementById('voice-indicator').style.display = 'flex';
+    updateStatus('greeting', 'Connected! Ready to take your order.');
+    logEvent('Connected to Gino');
+}
+
 function disconnect() {
-    if (roomSession?.localStream) {
-        roomSession.localStream.getTracks().forEach(t => t.stop());
-    }
-    roomSession = null;
+    if (teardownDone) return;
+    teardownDone = true;
+
+    // Unsubscribe every tracked RxJS subscription
+    subscriptions.forEach(s => { try { s.unsubscribe(); } catch (e) {} });
+    subscriptions = [];
 
     if (client) {
         try { client.disconnect(); } catch (e) { /* ignore */ }
         client = null;
     }
+    call = null;
+    currentLocalStream = null;
+
+    // Remove the hidden remote-audio element
+    if (remoteAudioEl) {
+        remoteAudioEl.srcObject = null;
+        remoteAudioEl.remove();
+        remoteAudioEl = null;
+    }
+    lastRemoteSig = '';
 
     connectBtn.style.display = 'inline-block';
     connectBtn.disabled = false;
@@ -810,24 +887,32 @@ function disconnect() {
 
 async function hangup() {
     try {
-        if (roomSession) await roomSession.hangup();
+        if (call) await call.hangup();
     } catch (e) {
         console.error('Hangup error:', e);
     }
     disconnect();
 }
 
-function toggleMute() {
-    if (!roomSession) return;
-    isMuted = !isMuted;
+async function toggleMute() {
+    if (!call) return;
+    const wantMuted = !isMuted;
+    let ok = false;
     try {
-        const stream = roomSession.localStream || roomSession.peer?.localStream;
-        if (stream) {
-            stream.getAudioTracks().forEach(t => { t.enabled = !isMuted; });
+        if (wantMuted) {
+            await call.self.mute();
+        } else {
+            await call.self.unmute();
         }
+        ok = true;
     } catch (e) {
-        console.error('Mute error:', e);
+        console.warn('Server mute failed, using local fallback:', e.message);
     }
+    if (!ok) {
+        const tracks = currentLocalStream ? currentLocalStream.getAudioTracks() : [];
+        tracks.forEach(t => { t.enabled = !wantMuted; });
+    }
+    isMuted = wantMuted;
     muteBtn.textContent = isMuted ? 'Unmute' : 'Mute';
 }
 
@@ -849,4 +934,4 @@ document.addEventListener('DOMContentLoaded', () => {
     logEvent('Application initialized');
 });
 
-window.addEventListener('beforeunload', () => { if (roomSession) hangup(); });
+window.addEventListener('beforeunload', () => { if (call) hangup(); });
